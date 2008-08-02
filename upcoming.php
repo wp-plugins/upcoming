@@ -1,9 +1,9 @@
 <?php
 /*
 Plugin Name: Upcoming
-Version: 0.1
+Version: 0.3
 Plugin URI: http://yoast.com/wordpress/upcoming/
-Description: Easily create a list of your upcoming events on your blog
+Description: Easily create a list of your upcoming events on your blog. Use the <a href="widgets.php">Widget</a> or include it in a post or page.
 Author: Joost de Valk
 Author URI: http://yoast.com/
 */
@@ -51,6 +51,16 @@ function upcoming_get_url($url, $cacheid, $cachetime = 86400) {
 	return $cache[$cacheid]['xml'];
 }
 
+function get_upcoming_events($userid) {
+	global $endpoint;
+	$url		= $endpoint."&method=user.getWatchlist&user_id=".$userid;
+	$xml 		= upcoming_get_url($url, "user".$userid);
+	$xml2a 		= new XMLToArray(); 
+	$eventsary 	= $xml2a->parse($xml);
+	$events 	= $eventsary["_ELEMENTS"][0]["_ELEMENTS"];
+	return $events;
+}
+
 function get_event_info($id) {
 	$options  	= get_option("UpcomingOptions");	
 	$endpoint 	= "http://upcoming.yahooapis.com/services/rest/?api_key=".$options['apikey'];
@@ -61,73 +71,85 @@ function get_event_info($id) {
 	return $eventinfo;
 }
 
+function create_event_block($event, $eb) {
+	// Pick an event $event and a template $eb and replace all vars with real values.
+	$eventinfo 	= get_event_info($event['id']);
+	$tags 		= explode(",",$eventinfo['tags']);
+	$state 		= $event['status'];
+
+	// Are you speaking / performing?	
+	if (in_array("speaker".$event['username'],$tags)) 
+		$state = "speaking";
+
+	// Construct Venue URL
+	if (isset($eventinfo['venue_url']) && $eventinfo['venue_url'] != "")
+		$venuelink = '<a rel="nofollow" href="'.$eventinfo['venue_url'].'">'.$event['venue_name'].'</a>';
+	else
+		$venuelink = $event['venue_name'];
+
+	if ($event['end_date'] != $event['start_date'] && $event['end_date'] != "")
+		$eventenddate = "- ".$event['end_date'];
+
+	$replacables = array(
+		'%STATE%' 				=> $state,
+		'%UPCOMINGURL%'			=> 'http://upcoming.yahoo.com/event/'.$event['id'],
+		'%EVENTURL%'			=> $eventinfo['url'],
+		'%EVENTNAME%'			=> $eventinfo['name'],
+		'%EVENTDESCRIPTION%'	=> $eventinfo['description'],
+		'%EVENTSTARTDATE%'		=> $eventinfo['start_date'],
+		'%EVENTENDDATE%'		=> $eventenddate,
+		'%VENUELINK%'			=> $venuelink,
+		'%VENUEADDRESS%'		=> $event['venue_address'],
+		'%VENUECITY%'			=> $event['venue_city'],
+		'%VENUECOUNTRY%'		=> $event['venue_country_name']
+	);
+	
+	foreach ($replacables as $var => $rep) {
+		if (!isset($rep)) 
+			$rep = "";
+		$eb = str_replace($var,$rep,$eb);
+	}
+	return $eb;
+}
+
 function show_upcoming($atts, $content = "") {
 	global $upcomingpluginpath;
 
 	$options  = get_option("UpcomingOptions");
-	if ($options['apikey'] != "") {		
+	if ($options['apikey'] != "") {
 		$endpoint = "http://upcoming.yahooapis.com/services/rest/?api_key=".$options['apikey'];
 	} else {
 		$content = "Please enter your API key for the Upcoming plugin in the options panel.";
 		return $content;
 	}
 
-	if (isset($atts['states'])) {
+	if (isset($atts['states']))
 		$states 	= explode(",",$atts['states']);		
-	} else {
+	else
 		$states 	= array('attend');
-	}
 	
-	if (isset($atts['userid'])) {
-		$url	= $endpoint."&method=user.getWatchlist&user_id=".$atts['userid'];
-		$xml 	= upcoming_get_url($url, "user".$atts['userid']);
+	if (isset($atts['userid']) || ( isset($atts[0]) && is_numeric($atts[0]) ) ) {
+		if(!isset($atts['userid'])) 
+			$atts['userid'] = $atts[0];
+	} else if ( isset($atts['username']) || ( isset($atts[0]) && !is_numeric($atts[0]) ) ) {
+		if(!isset($atts['username']))
+			$atts['username'] = $atts[0];
+		$url			= $endpoint."&method=user.getInfoByUsername&username=".$atts['username'];
+		$xml 			= upcoming_get_url($url, "getid".$atts['username'], 2592000);
+		$xml2a 			= new XMLToArray();
+		$userinfo 		= $xml2a->parse($xml);
+		$atts['userid']	= $userinfo['_ELEMENTS'][0]['_ELEMENTS'][0]['id'];
 	} else {
 		exit;
 	}
-				
-	$xml2a 		= new XMLToArray(); 
-	$eventsary 	= $xml2a->parse($xml);
-	$events 	= $eventsary["_ELEMENTS"]["0"]["_ELEMENTS"];
+
+	$events = get_upcoming_events($atts['userid']);
 	
-	$content = $options['topblock'];
+	$content 	= $options['topblock'];
 	
 	foreach($events as $event) {
 		if (in_array($event['status'], $states)) {
-			$eventinfo = get_event_info($event['id']);
-			$tags = explode(",",$eventinfo['tags']);
-			
-			// Are you speaking / performing?
-			$state = $event['status'];
-			if (in_array("speaker".$event['username'],$tags)) {
-				$state = "speaking";
-			}
-
-			// Construct Venue URL
-			if (isset($eventinfo['venue_url']) && $eventinfo['venue_url'] != "") {
-				$venuelink = '<a rel="nofollow" href="'.$eventinfo['venue_url'].'">'.$event['venue_name'].'</a>';
-			} else {
-				$venuelink = $event['venue_name'];
-			}
-
-			$eb = $options['eventblock'];
-			
-			$eb = str_replace('%STATE%',$state,$eb);
-			$eb = str_replace('%UPCOMINGURL%','http://upcoming.yahoo.com/event/'.$event['id'],$eb);
-			$eb = str_replace('%EVENTURL%',$eventinfo['url'],$eb);
-			$eb = str_replace('%EVENTNAME%',$event['name'],$eb);
-			$eb = str_replace('%EVENTDESCRIPTION%',$event['description'],$eb);
-			$eb = str_replace('%EVENTSTARTDATE%',$event['start_date'],$eb);			
-			$eb = str_replace('%VENUELINK%',$venuelink,$eb);
-			$eb = str_replace('%VENUEADDRESS%',$event['venue_address'],$eb);
-			$eb = str_replace('%VENUECITY%',$event['venue_city'],$eb);
-			$eb = str_replace('%VENUECOUNTRY%',$event['venue_country_name'],$eb);
-
-			if ($event['end_date'] != $event['start_date'] && $event['end_date'] != "") {
-				$eb = str_replace('%EVENTENDDATE%',"- ".$event['end_date'],$eb);		
-			} else {
-				$eb = str_replace('%EVENTENDDATE%','',$eb);
-			}
-
+			$eb = create_event_block($event, $options['eventblock']);
 			$content .= $eb;
 		}
 	}
@@ -135,8 +157,74 @@ function show_upcoming($atts, $content = "") {
 	$footer = str_replace('%USERID%',$atts['userid'],$options['footerblock']);
 	$footer = str_replace('%IMGLINK%',$upcomingpluginpath."upcoming_logo2.gif",$footer);
 	$content .= $footer;
-		
+
 	return $content;
+}
+
+function upcomingwidget_control() {
+	$options = get_option('UpcomingWidget');
+
+	if ( !is_array($options) ) {
+		$options = array(
+			'title'			=> 'Upcoming Events', 
+			'numevents'		=> 5,
+			'widgeteb'		=> '<li><a href="%EVENTURL%">%EVENTNAME%</a><br/>'."\n"
+								.'%EVENTSTARTDATE% %EVENTENDDATE%<br/>'."\n"
+								.'%VENUECITY%, %VENUECOUNTRY%</li>'
+		);
+	}
+
+	if ( $_POST['upcomingwidget-submit'] ) {
+		$options['title'] 		= strip_tags(stripslashes($_POST['upcomingwidget-title']));
+		$options['numevents'] 	= $_POST['upcomingwidget-numevents'];
+		$options['userid'] 		= $_POST['upcomingwidget-userid'];
+		$options['widgeteb'] 	= stripslashes($_POST['upcomingwidget-widgeteb']);
+		update_option('upcomingwidget', $options);
+	}
+
+	$title = htmlspecialchars($options['title'], ENT_QUOTES);
+
+	echo '<p style="text-align:right;"><label for="upcomingwidget-title">Title:</label><br /> <input style="width: 200px;" id="upcomingwidget-title" name="upcomingwidget-title" type="text" value="'.$title.'" /></p>';
+
+	echo '<p style="text-align:right;"><label for="upcomingwidget-numevents">Number of events to display:</label><br /> <input style="width: 200px;" id="upcomingwidget-numevents" name="upcomingwidget-numevents" type="text" value="'.$options['numevents'].'" /></p>';
+
+	echo '<p style="text-align:right;"><label for="upcomingwidget-userid">Upcoming User ID:</label><br /> <input style="width: 200px;" id="upcomingwidget-userid" name="upcomingwidget-userid" type="text" value="'.$options['userid'].'" /></p>';
+
+	echo '<p style="text-align:right;"><label for="upcomingwidget-eb">Event block template:</label><br /> <textarea rows="6" cols="50" name="upcomingwidget-widgeteb">'.$options['widgeteb'].'</textarea></p>';
+
+	echo '<input type="hidden" id="upcomingwidget-submit" name="upcomingwidget-submit" value="1" />';
+}
+
+function upcomingwidget_init() {
+	if (!function_exists('register_sidebar_widget'))
+		return;
+	
+	function upcomingwidget($args) {
+		extract($args);
+				
+		$options 	= get_option('UpcomingWidget');
+		$title 		= $options['title'];
+		$events 	= get_upcoming_events($options['userid']);
+		$states 	= array('attend');
+
+		echo $before_widget;
+		echo $before_title . $title . $after_title;
+		echo "<ul>\n";
+
+		$i = 0;
+		while ($i < $options['numevents'] && $i < count($events)) {
+			if (in_array($events[$i]['status'], $states)) {
+				echo create_event_block($events[$i], $options['widgeteb']);
+				$i++;
+			}
+		}
+
+		echo "</ul>\n";
+		echo $after_widget;
+	}
+	
+	register_sidebar_widget('Upcoming Widget', 'upcomingwidget');
+	register_widget_control('Upcoming Widget', 'upcomingwidget_control', 450, 200);
 }
 
 if ( ! class_exists( 'Upcoming_Admin' ) ) {
@@ -174,7 +262,7 @@ if ( ! class_exists( 'Upcoming_Admin' ) ) {
 			
 			$options = get_option('UpcomingOptions');
 			if ($options['apikey'] == "") {
-				echo "<div id=\"message\" class=\"error\"><p>Error, please enter your API key, <a href=\"http://upcoming.yahoo.com/services/api/keygen.php\">create one here</a>.</p></div>\n";
+				echo "<div id=\"message\" class=\"error\"><p>Error, please enter your API key, you can <a href=\"http://upcoming.yahoo.com/services/api/keygen.php\">create one here</a>.</p></div>\n";
 			}
 			?>
 			<div class="wrap">
@@ -235,4 +323,6 @@ if ( ! class_exists( 'Upcoming_Admin' ) ) {
 
 add_shortcode('upcoming', 'show_upcoming');
 add_action('admin_menu', array('Upcoming_Admin','add_config_page'));
+add_action('plugins_loaded', 'upcomingwidget_init');
+
 ?>
