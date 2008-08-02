@@ -111,7 +111,7 @@ function show_upcoming($atts, $content = "") {
 
 			$eb = $options['eventblock'];
 			
-			$eb = str_replace('%STATE%',$speaking,$eb);
+			$eb = str_replace('%STATE%',$state,$eb);
 			$eb = str_replace('%UPCOMINGURL%','http://upcoming.yahoo.com/event/'.$event['id'],$eb);
 			$eb = str_replace('%EVENTURL%',$eventinfo['url'],$eb);
 			$eb = str_replace('%EVENTNAME%',$event['name'],$eb);

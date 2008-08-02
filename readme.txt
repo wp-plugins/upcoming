@@ -25,6 +25,8 @@ To get the same effect with the conferences you're speaking add, tag these event
 	padding-left: 30px;
 }`
 
+The microphone icon that comes with the plugin is &copy; [Everaldo Coelho](http://www.everaldo.com/), licensed under the LGPL and can be found [here](http://www.iconfinder.net/index.php?q=microphone&page=icondetails&iconid=1846&size=22&q=microphone&s12=on&s16=on&s22=on&s32=on&s48=on&s64=on&s128=on)
+
 == Changelog ==
 
 * 0.2 Minor bugfixes and addition of %STATE% replace code
