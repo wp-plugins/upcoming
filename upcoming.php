@@ -22,10 +22,10 @@ require("xmlfunctions.php");
 // Load some defaults
 $options['apikey'] 	= "";
 $options['topblock'] 	= "\n".'<table class="upcoming">'."\n";
-$options['eventblock'] 	= '<tr class="%SPEAKING%"><td colspan="3"><h4><a href="%EVENTURL%">%EVENTNAME%</a></h4></td></tr>'."\n"
+$options['eventblock'] 	= '<tr class="%STATE%"><td colspan="3"><h4><a href="%EVENTURL%">%EVENTNAME%</a></h4></td></tr>'."\n"
 						. '<tr><th>Date:</th><td>%EVENTSTARTDATE% %EVENTENDDATE%</td>'
 						. '<td><small><a rel="nofollow" href="%UPCOMINGURL%">Check it out on Upcoming</a></small></td></tr>'."\n"
-						. '<tr class="%STATE%"><th valign="top">Location:</th><td colspan="2">%VENUELINK%<br/>'
+						. '<tr><th valign="top">Location:</th><td colspan="2">%VENUELINK%<br/>'
 						. '%VENUEADDRESS%<br/>'
 						. '%VENUECITY%, %VENUECOUNTRY%</td></tr>'."\n";
 												
