@@ -4,7 +4,7 @@ Donate link: http://yoast.com/donate/
 Tags: social, events, event calendar
 Requires at least: 2.2
 Tested up to: 2.6
-stable tag: 0.1
+stable tag: 0.2
 
 Easily create a list of your upcoming events on your blog.
 
@@ -24,6 +24,11 @@ To get the same effect with the conferences you're speaking add, tag these event
 	background: url(/wp-content/plugins/upcoming/microphone.png) no-repeat left top;
 	padding-left: 30px;
 }`
+
+== Changelog ==
+
+* 0.2 Minor bugfixes and addition of %STATE% replace code
+* 0.1 Initial version
 
 == Installation ==
 

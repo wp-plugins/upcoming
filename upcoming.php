@@ -25,7 +25,7 @@ $options['topblock'] 	= "\n".'<table class="upcoming">'."\n";
 $options['eventblock'] 	= '<tr class="%SPEAKING%"><td colspan="3"><h4><a href="%EVENTURL%">%EVENTNAME%</a></h4></td></tr>'."\n"
 						. '<tr><th>Date:</th><td>%EVENTSTARTDATE% %EVENTENDDATE%</td>'
 						. '<td><small><a rel="nofollow" href="%UPCOMINGURL%">Check it out on Upcoming</a></small></td></tr>'."\n"
-						. '<tr class="%SPEAKING%"><th valign="top">Location:</th><td colspan="2">%VENUELINK%<br/>'
+						. '<tr class="%STATE%"><th valign="top">Location:</th><td colspan="2">%VENUELINK%<br/>'
 						. '%VENUEADDRESS%<br/>'
 						. '%VENUECITY%, %VENUECOUNTRY%</td></tr>'."\n";
 												
@@ -97,9 +97,9 @@ function show_upcoming($atts, $content = "") {
 			$tags = explode(",",$eventinfo['tags']);
 			
 			// Are you speaking / performing?
-			$speaking = "";
+			$state = $event['status'];
 			if (in_array("speaker".$event['username'],$tags)) {
-				$speaking = "speaking";
+				$state = "speaking";
 			}
 
 			// Construct Venue URL
@@ -111,7 +111,7 @@ function show_upcoming($atts, $content = "") {
 
 			$eb = $options['eventblock'];
 			
-			$eb = str_replace('%SPEAKING%',$speaking,$eb);
+			$eb = str_replace('%STATE%',$speaking,$eb);
 			$eb = str_replace('%UPCOMINGURL%','http://upcoming.yahoo.com/event/'.$event['id'],$eb);
 			$eb = str_replace('%EVENTURL%',$eventinfo['url'],$eb);
 			$eb = str_replace('%EVENTNAME%',$event['name'],$eb);
@@ -123,7 +123,9 @@ function show_upcoming($atts, $content = "") {
 			$eb = str_replace('%VENUECOUNTRY%',$event['venue_country_name'],$eb);
 
 			if ($event['end_date'] != $event['start_date'] && $event['end_date'] != "") {
-				$eb = str_replace('%EVENTENDDATE%',"- ".$event['end_date'],$eb);			
+				$eb = str_replace('%EVENTENDDATE%',"- ".$event['end_date'],$eb);		
+			} else {
+				$eb = str_replace('%EVENTENDDATE%','',$eb);
 			}
 
 			$content .= $eb;
