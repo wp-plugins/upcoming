@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Upcoming
-Version: 0.3
+Version: 0.3.1
 Plugin URI: http://yoast.com/wordpress/upcoming/
 Description: Easily create a list of your upcoming events on your blog. Use the <a href="widgets.php">Widget</a> or include it in a post or page.
 Author: Joost de Valk
@@ -36,6 +36,9 @@ $options['footerblock'] = '<tr><td colspan="2"><a href="http://upcoming.yahoo.co
 
 add_option("UpcomingOptions",$options,'','no');
 
+$options  	= get_option("UpcomingOptions");
+$endpoint 	= "http://upcoming.yahooapis.com/services/rest/?api_key=".$options['apikey'];
+
 function upcoming_get_url($url, $cacheid, $cachetime = 86400) {
 	// Cache the requests to the DB to not overload the Upcoming API
 	$cache = get_option("UpcomingCache");
@@ -62,8 +65,7 @@ function get_upcoming_events($userid) {
 }
 
 function get_event_info($id) {
-	$options  	= get_option("UpcomingOptions");	
-	$endpoint 	= "http://upcoming.yahooapis.com/services/rest/?api_key=".$options['apikey'];
+	global $endpoint;
 	$xml 		= upcoming_get_url($endpoint."&method=event.getInfo&event_id=".$id, "event".$id, 259200);
 	$xml2a 		= new XMLToArray();
 	$eventinfo 	= $xml2a->parse($xml);
@@ -128,9 +130,8 @@ function show_upcoming($atts, $content = "") {
 	else
 		$states 	= array('attend');
 	
-	if (isset($atts['userid']) || ( isset($atts[0]) && is_numeric($atts[0]) ) ) {
-		if(!isset($atts['userid'])) 
-			$atts['userid'] = $atts[0];
+	if (isset($atts[0]) && is_numeric($atts[0]) ) {
+		$atts['userid'] = $atts[0];
 	} else if ( isset($atts['username']) || ( isset($atts[0]) && !is_numeric($atts[0]) ) ) {
 		if(!isset($atts['username']))
 			$atts['username'] = $atts[0];
@@ -139,14 +140,12 @@ function show_upcoming($atts, $content = "") {
 		$xml2a 			= new XMLToArray();
 		$userinfo 		= $xml2a->parse($xml);
 		$atts['userid']	= $userinfo['_ELEMENTS'][0]['_ELEMENTS'][0]['id'];
-	} else {
-		exit;
-	}
+	} 
 
 	$events = get_upcoming_events($atts['userid']);
 	
 	$content 	= $options['topblock'];
-	
+		
 	foreach($events as $event) {
 		if (in_array($event['status'], $states)) {
 			$eb = create_event_block($event, $options['eventblock']);

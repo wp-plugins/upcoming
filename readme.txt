@@ -4,7 +4,7 @@ Donate link: http://yoast.com/donate/
 Tags: social, events, event calendar
 Requires at least: 2.2
 Tested up to: 2.6
-stable tag: 0.3
+stable tag: 0.3.1
 
 Easily create a list of your upcoming events on your blog. Use the widget or include it in a post or page.
 
