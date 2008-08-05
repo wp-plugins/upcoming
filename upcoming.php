@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Upcoming
-Version: 0.3.1
+Version: 0.3.2
 Plugin URI: http://yoast.com/wordpress/upcoming/
 Description: Easily create a list of your upcoming events on your blog. Use the <a href="widgets.php">Widget</a> or include it in a post or page.
 Author: Joost de Valk
@@ -17,7 +17,8 @@ if ( !defined('WP_CONTENT_DIR') )
 // Guess the location
 $upcomingpluginpath = WP_CONTENT_URL.'/plugins/'.plugin_basename(dirname(__FILE__)).'/';
 
-require("xmlfunctions.php");
+require_once("xmlfunctions.php");
+require_once(ABSPATH . 'wp-includes/class-snoopy.php');
 
 // Load some defaults
 $options['apikey'] 	= "";
