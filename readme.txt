@@ -3,8 +3,8 @@ Contributors: joostdevalk
 Donate link: http://yoast.com/donate/
 Tags: social, events, event calendar
 Requires at least: 2.2
-Tested up to: 2.6
-stable tag: 0.3.2
+Tested up to: 2.7
+stable tag: 0.4
 
 Easily create a list of your upcoming events on your blog. Use the widget or include it in a post or page.
 
@@ -29,6 +29,7 @@ The microphone icon that comes with the plugin is &copy; [Everaldo Coelho](http:
 
 == Changelog ==
 
+* 0.4 Added functionality for groups, thanks to the guys at [Ribot](http://ribot.co.uk/)
 * 0.3.2 Made sure Snoopy was available.
 * 0.3.1 Small bugfix
 * 0.3 Code clean up and addition of a widget
@@ -44,5 +45,6 @@ The microphone icon that comes with the plugin is &copy; [Everaldo Coelho](http:
 
 1. In your WordPress administration, go to the Plugins page
 1. Activate the Upcoming plugin and a subpage for Upcoming will appear in your Settings menu.
+1. Either enable the widget, or add code for a user: `[upcoming userid="12345"]` or for a group `[upcoming groupid="12345"]` to any page or post of your choosing.
 
 If you find any bugs or have any ideas, please mail me.

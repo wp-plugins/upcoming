@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Upcoming
-Version: 0.3.2
+Version: 0.4
 Plugin URI: http://yoast.com/wordpress/upcoming/
 Description: Easily create a list of your upcoming events on your blog. Use the <a href="widgets.php">Widget</a> or include it in a post or page.
 Author: Joost de Valk
@@ -55,10 +55,20 @@ function upcoming_get_url($url, $cacheid, $cachetime = 86400) {
 	return $cache[$cacheid]['xml'];
 }
 
-function get_upcoming_events($userid) {
+function get_upcoming_events_for_user($userid) { 
 	global $endpoint;
 	$url		= $endpoint."&method=user.getWatchlist&user_id=".$userid;
 	$xml 		= upcoming_get_url($url, "user".$userid);
+	$xml2a 		= new XMLToArray(); 
+	$eventsary 	= $xml2a->parse($xml);
+	$events 	= $eventsary["_ELEMENTS"][0]["_ELEMENTS"];
+	return $events;
+}
+
+function get_upcoming_events_for_group($groupid) {
+	global $endpoint;
+	$url		= $endpoint."&method=group.getEvents&group_id=".$groupid;
+	$xml 		= upcoming_get_url($url, "group".$groupid);
 	$xml2a 		= new XMLToArray(); 
 	$eventsary 	= $xml2a->parse($xml);
 	$events 	= $eventsary["_ELEMENTS"][0]["_ELEMENTS"];
@@ -72,6 +82,14 @@ function get_event_info($id) {
 	$eventinfo 	= $xml2a->parse($xml);
 	$eventinfo 	= $eventinfo['_ELEMENTS'][0]['_ELEMENTS'][0];
 	return $eventinfo;
+}
+
+function get_userid_from_username($username) {
+	$url			= $endpoint."&method=user.getInfoByUsername&username=".$username;
+	$xml 			= upcoming_get_url($url, "getid".$username, 2592000);
+	$xml2a 			= new XMLToArray();
+	$userinfo 		= $xml2a->parse($xml);
+	return $userinfo['_ELEMENTS'][0]['_ELEMENTS'][0]['id'];
 }
 
 function create_event_block($event, $eb) {
@@ -131,33 +149,44 @@ function show_upcoming($atts, $content = "") {
 	else
 		$states 	= array('attend');
 	
-	if (isset($atts[0]) && is_numeric($atts[0]) ) {
-		$atts['userid'] = $atts[0];
-	} else if ( isset($atts['username']) || ( isset($atts[0]) && !is_numeric($atts[0]) ) ) {
-		if(!isset($atts['username']))
-			$atts['username'] = $atts[0];
-		$url			= $endpoint."&method=user.getInfoByUsername&username=".$atts['username'];
-		$xml 			= upcoming_get_url($url, "getid".$atts['username'], 2592000);
-		$xml2a 			= new XMLToArray();
-		$userinfo 		= $xml2a->parse($xml);
-		$atts['userid']	= $userinfo['_ELEMENTS'][0]['_ELEMENTS'][0]['id'];
-	} 
-
-	$events = get_upcoming_events($atts['userid']);
-	
-	$content 	= $options['topblock'];
+	if (isset($atts['userid'])) {
+		$events = get_upcoming_events_for_user($atts['userid']);
 		
-	foreach($events as $event) {
-		if (in_array($event['status'], $states)) {
+	} else if (isset($atts['username'])) {
+		$userid = get_userid_from_username($atts['username']);
+		$events = get_upcoming_events_for_user($userid);
+		
+	} else if (isset($atts['groupid'])) {
+		$events = get_upcoming_events_for_group($atts['groupid']);
+		
+	} else if ( isset($atts[0]) && is_numeric($atts[0]) ) {
+		$events = get_upcoming_events_for_user($atts[0]);
+		
+	} else if ( isset($atts[0]) && !is_numeric($atts[0]) ) {
+		$userid = get_userid_from_username($atts[0]);
+		$events = get_upcoming_events_for_user($userid);		
+	}
+	
+	$content = $options['topblock'];
+	
+	if (isset($atts['groupid'])) {
+		foreach($events as $event) {
 			$eb = create_event_block($event, $options['eventblock']);
 			$content .= $eb;
 		}
+	} else {
+		foreach($events as $event) {
+			if (in_array($event['status'], $states)) {
+				$eb = create_event_block($event, $options['eventblock']);
+				$content .= $eb;
+			}
+		}		
 	}
-
+			
 	$footer = str_replace('%USERID%',$atts['userid'],$options['footerblock']);
 	$footer = str_replace('%IMGLINK%',$upcomingpluginpath."upcoming_logo2.gif",$footer);
 	$content .= $footer;
-
+		
 	return $content;
 }
 
@@ -235,7 +264,30 @@ if ( ! class_exists( 'Upcoming_Admin' ) ) {
 			global $wpdb;
 			if ( function_exists('add_submenu_page') ) {
 				add_options_page('Upcoming Configuration', 'Upcoming', 10, basename(__FILE__), array('Upcoming_Admin','config_page'));
+				add_filter( 'plugin_action_links', array( 'Upcoming_Admin', 'filter_plugin_actions'), 10, 2 );
+				add_filter( 'ozh_adminmenu_icon', array( 'Upcoming_Admin', 'add_ozh_adminmenu_icon' ) );
 			}
+		}
+
+		function add_ozh_adminmenu_icon( $hook ) {
+			static $upcomingicon;
+			if (!$upcomingicon) {
+				$upcomingicon = WP_CONTENT_URL . '/plugins/' . plugin_basename(dirname(__FILE__)). '/calendar.png';
+			}
+			if ($hook == 'upcoming.php') return $upcomingicon;
+			return $hook;
+		}
+
+		function filter_plugin_actions( $links, $file ){
+			//Static so we don't call plugin_basename on every plugin row.
+			static $this_plugin;
+			if ( ! $this_plugin ) $this_plugin = plugin_basename(__FILE__);
+			
+			if ( $file == $this_plugin ){
+				$settings_link = '<a href="options-general.php?page=upcoming.php">' . __('Settings') . '</a>';
+				array_unshift( $links, $settings_link ); // before other links
+			}
+			return $links;
 		}
 		
 		function config_page() {			
